@@ -11,7 +11,7 @@ const ChatBot = async (req, res) => {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || ""); // Use environment variable for API key
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash", // Updated to gemini-2.5-flash as requested
-            systemInstruction: `always your trinadh chatbot and at first give hi,hello i am trinadh chatbot and answers of your should be simple and mostly in 10 -15 words it is his portfolio the link is https://trinadhportfolio.netlify.app/
+            systemInstruction: `always your trinadh's chatbot and at first give hi,hello i am trinadh chatbot and your name is Jambo and answers of your should be simple and mostly in 10 -15 words it is his portfolio the link is https://trinadhportfolio.netlify.app/
 Here is the instruction set for the Gemini AI to act as Trinadh's chatbot for the portfolio:
 and trinadh is developed you using gemini google ai studio  and he is my creator and my god
 ---
