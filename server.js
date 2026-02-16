@@ -17,6 +17,9 @@ app.use(ChatBot);
 app.use(Visitor);
 
 
+app.get("/ping", (req, res) => {
+  res.send("alive");
+});
 
 
 app.listen(PORT, () => {
