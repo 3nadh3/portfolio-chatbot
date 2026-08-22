@@ -1,7 +1,25 @@
-var express = require('express');
-const VistorNumber = require('../controllers/VistorController');  // ✅ Fix: Import function, not file
+const express = require('express');
+const VistorNumber = require('../controllers/VistorController');
+
 const router = express.Router();
 
-router.get('/visitor', VistorNumber);  // ✅ Fix: Pass the function, not an object
+const allowedOrigins = [
+    'https://trinadhportfolio.netlify.app',
+    'https://trinadh.dev'
+];
+
+const checkOrigin = (req, res, next) => {
+    const origin = req.headers.origin;
+
+    if (!origin || !allowedOrigins.includes(origin)) {
+        return res.status(403).json({
+            error: 'Forbidden'
+        });
+    }
+
+    next();
+};
+
+router.get('/visitor', checkOrigin, VistorNumber);
 
 module.exports = router;
