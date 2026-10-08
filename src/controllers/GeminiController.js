@@ -129,7 +129,8 @@ Do not include suggestions inside the message; the website renders them as butto
             temperature: 0.4,
             topP: 0.95,
             topK: 64,
-            maxOutputTokens: 2048,
+            // Leave room for Gemini reasoning as well as the structured answer.
+            maxOutputTokens: 8192,
             responseMimeType: "application/json",
             responseSchema,
         };
@@ -143,13 +144,19 @@ Do not include suggestions inside the message; the website renders them as butto
         // Send the new user input to the chat session
         const result = await chatSession.sendMessage(input);
 
+        if (result.response?.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+            const error = new Error('Incomplete model response');
+            error.code = 'MODEL_RESPONSE_TRUNCATED';
+            throw error;
+        }
         const text = result.response?.text();
         if (typeof text !== 'string' || !text.trim()) throw new Error('Empty model response');
         return res.json(parseReply(text));
     } catch (error) {
         if (error.status === 400) return res.status(400).json({ error: error.message });
-        console.error('Chat request failed:', error.name);
-        return res.status(502).json({ error: 'The assistant is temporarily unavailable. Please retry.' });
+        const code = error.code === 'MODEL_RESPONSE_TRUNCATED' ? error.code : error instanceof SyntaxError ? 'MODEL_RESPONSE_INVALID' : 'PROVIDER_UNAVAILABLE';
+        console.error('Chat request failed:', code, error.name);
+        return res.status(502).json({ error: 'The assistant is temporarily unavailable. Please retry.', code });
     }
 };
 
