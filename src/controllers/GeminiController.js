@@ -3,6 +3,8 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { parseConversation } = require('../lib/conversation');
 const { responseSchema, parseReply } = require('../lib/chatResponse');
+const { providerError } = require('../lib/providerError');
+const MODEL = 'gemini-2.5-flash';
 
 // Your ChatBot async function (adapted for a server-side Node.js context)
 const ChatBot = async (req, res) => {
@@ -12,7 +14,7 @@ const ChatBot = async (req, res) => {
         // For Canvas, it's typically injected, but for your local setup, use process.env.GEMINI_API_KEY.
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || ""); // Use environment variable for API key
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash", // Updated to gemini-2.5-flash as requested
+            model: MODEL,
             systemInstruction: `You are Trinadh Chatbot.
 
 Your name is Jambo.
@@ -155,13 +157,13 @@ Do not include suggestions inside the message; the website renders them as butto
             error.code = 'MODEL_RESPONSE_EMPTY';
             throw error;
         }
-        return res.json(parseReply(text));
+        return res.json({...parseReply(text),model:MODEL});
     } catch (error) {
         if (error.status === 400 && error.name === 'Error') return res.status(400).json({ error: error.message });
-        const modelCodes = ['MODEL_RESPONSE_TRUNCATED', 'MODEL_RESPONSE_INVALID', 'MODEL_RESPONSE_EMPTY'];
-        const code = modelCodes.includes(error.code) ? error.code : error instanceof SyntaxError ? 'MODEL_RESPONSE_INVALID' : error.status === 429 ? 'PROVIDER_RATE_LIMITED' : 'PROVIDER_UNAVAILABLE';
-        console.error('Chat request failed:', code, error.name, error.status || '');
-        return res.status(code === 'PROVIDER_RATE_LIMITED' ? 429 : 502).json({ error: 'The assistant is temporarily unavailable. Please retry.', code, ...(Number.isInteger(error.status) ? { providerStatus: error.status } : {}) });
+        const failure=providerError(error);
+        console.error('Chat request failed:',failure.code,MODEL,failure.quota||{},error.name,error.status||'');
+        if(failure.quota?.retryAfterSeconds)res.set('Retry-After',String(failure.quota.retryAfterSeconds));
+        return res.status(failure.status).json({error:'The assistant is temporarily unavailable.',code:failure.code,model:MODEL,...(failure.quota?{quota:failure.quota}:{}),...(Number.isInteger(error.status)?{providerStatus:error.status}:{})});
     }
 };
 
