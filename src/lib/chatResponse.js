@@ -13,7 +13,9 @@ const responseSchema = {
 function parseReply(text) {
   const data = JSON.parse(text);
   if (!data || typeof data.message !== 'string' || !data.message.trim() || data.message.length > 12000 || !Array.isArray(data.suggestions)) {
-    throw new Error('Invalid model reply');
+    const error = new Error('Invalid model reply');
+    error.code = 'MODEL_RESPONSE_INVALID';
+    throw error;
   }
   const suggestions = [...new Set(data.suggestions.filter(q => typeof q === 'string' && q.trim() && q.trim().length <= 120).map(q => q.trim()))].slice(0, 3);
   return { message: data.message.trim(), suggestions };

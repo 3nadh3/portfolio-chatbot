@@ -150,13 +150,18 @@ Do not include suggestions inside the message; the website renders them as butto
             throw error;
         }
         const text = result.response?.text();
-        if (typeof text !== 'string' || !text.trim()) throw new Error('Empty model response');
+        if (typeof text !== 'string' || !text.trim()) {
+            const error = new Error('Empty model response');
+            error.code = 'MODEL_RESPONSE_EMPTY';
+            throw error;
+        }
         return res.json(parseReply(text));
     } catch (error) {
-        if (error.status === 400) return res.status(400).json({ error: error.message });
-        const code = error.code === 'MODEL_RESPONSE_TRUNCATED' ? error.code : error instanceof SyntaxError ? 'MODEL_RESPONSE_INVALID' : 'PROVIDER_UNAVAILABLE';
-        console.error('Chat request failed:', code, error.name);
-        return res.status(502).json({ error: 'The assistant is temporarily unavailable. Please retry.', code });
+        if (error.status === 400 && error.name === 'Error') return res.status(400).json({ error: error.message });
+        const modelCodes = ['MODEL_RESPONSE_TRUNCATED', 'MODEL_RESPONSE_INVALID', 'MODEL_RESPONSE_EMPTY'];
+        const code = modelCodes.includes(error.code) ? error.code : error instanceof SyntaxError ? 'MODEL_RESPONSE_INVALID' : error.status === 429 ? 'PROVIDER_RATE_LIMITED' : 'PROVIDER_UNAVAILABLE';
+        console.error('Chat request failed:', code, error.name, error.status || '');
+        return res.status(502).json({ error: 'The assistant is temporarily unavailable. Please retry.', code, ...(Number.isInteger(error.status) ? { providerStatus: error.status } : {}) });
     }
 };
 
