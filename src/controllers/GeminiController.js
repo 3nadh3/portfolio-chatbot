@@ -4,7 +4,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { parseConversation } = require('../lib/conversation');
 const { responseSchema, parseReply } = require('../lib/chatResponse');
 const { providerError } = require('../lib/providerError');
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.1-flash-lite';
 
 // Your ChatBot async function (adapted for a server-side Node.js context)
 const ChatBot = async (req, res) => {
