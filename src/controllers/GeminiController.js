@@ -161,7 +161,7 @@ Do not include suggestions inside the message; the website renders them as butto
         const modelCodes = ['MODEL_RESPONSE_TRUNCATED', 'MODEL_RESPONSE_INVALID', 'MODEL_RESPONSE_EMPTY'];
         const code = modelCodes.includes(error.code) ? error.code : error instanceof SyntaxError ? 'MODEL_RESPONSE_INVALID' : error.status === 429 ? 'PROVIDER_RATE_LIMITED' : 'PROVIDER_UNAVAILABLE';
         console.error('Chat request failed:', code, error.name, error.status || '');
-        return res.status(502).json({ error: 'The assistant is temporarily unavailable. Please retry.', code, ...(Number.isInteger(error.status) ? { providerStatus: error.status } : {}) });
+        return res.status(code === 'PROVIDER_RATE_LIMITED' ? 429 : 502).json({ error: 'The assistant is temporarily unavailable. Please retry.', code, ...(Number.isInteger(error.status) ? { providerStatus: error.status } : {}) });
     }
 };
 

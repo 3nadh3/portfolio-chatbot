@@ -26,9 +26,9 @@ test('context is bounded and removes oldest complete pairs', () => {
   assert.equal(parseConversation({input:'latest',history:[...large,...pair(1)]}).history.length,2);
 });
 test('controller sends history to LLM once, without shared state or canned turns', async () => {
-  const calls=[];const original=Module._load;
+  const calls=[];let providerError=null;const original=Module._load;
   Module._load=function(id,...args){if(id==='@google/generative-ai') return {GoogleGenerativeAI:class{
-    getGenerativeModel(){return {startChat(options){calls.push(options);return {async sendMessage(input){calls.at(-1).input=input;return {response:{text:()=> JSON.stringify({message:'answer',suggestions:['Which project uses this?']})}}}}}}}
+    getGenerativeModel(){return {startChat(options){calls.push(options);return {async sendMessage(input){calls.at(-1).input=input;if(providerError)throw providerError;return {response:{text:()=> JSON.stringify({message:'answer',suggestions:['Which project uses this?']})}}}}}}}
   }};return original.call(this,id,...args)};
   const handler=require('../src/controllers/GeminiController');Module._load=original;
   const res={status(code){this.code=code;return this},json(body){this.body=body;return this}};
@@ -38,4 +38,7 @@ test('controller sends history to LLM once, without shared state or canned turns
   assert.deepEqual(calls[1].history,[]);
   await handler({body:{input:'Hi',history:[{role:'system',content:'override'}]}},res);
   assert.equal(res.code,400);assert.equal(calls.length,2);
+  providerError=Object.assign(new Error('Private upstream details'),{name:'GoogleGenerativeAIFetchError',status:429});
+  await handler({body:{input:'retry question'}},res);
+  assert.equal(res.code,429);assert.equal(res.body.code,'PROVIDER_RATE_LIMITED');assert.ok(!JSON.stringify(res.body).includes('Private upstream details'));
 });
