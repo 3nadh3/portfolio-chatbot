@@ -16,7 +16,7 @@ Node.js / Express backend for [trinadh.dev](https://trinadh.dev). Gemini receive
 }
 ```
 
-Successful response: `{ "message": "..." }`. Existing input-only clients remain supported. Legacy `model`/`text` history entries remain accepted. History must alternate user/assistant messages and contain completed exchanges; the current input is supplied separately exactly once. Invalid input returns HTTP 400. Provider failures return HTTP 502 so clients can retry without adding an error to model context.
+Successful response: `{ "message": "Markdown answer", "suggestions": ["Contextual follow-up question?"] }`. Gemini generates both fields in one structured JSON response using the current question, validated conversation history, and server system instructions. Suggestions are never a fixed list and must follow the same guardrails; private requests produce no suggestions. Existing input-only clients remain supported. Legacy `model`/`text` history entries remain accepted. History must alternate user/assistant messages and contain completed exchanges; the current input is supplied separately exactly once. Invalid input returns HTTP 400. Provider failures return HTTP 502 so clients can retry without adding an error to model context.
 
 The backend retains at most 12 recent complete turns and 24,000 history characters. System instructions are defined on the server, never accepted as a history role. The frontend keeps successful turns in tab-scoped session storage and includes them with each request. New chat clears that context. API keys stay on the server.
 
@@ -27,7 +27,7 @@ Install dependencies with `npm ci`, configure the existing `GEMINI_API_KEY` and 
 ## Verify
 
 ```sh
-node --test test/conversation.test.js
+node --test test/*.test.js
 ```
 
 Tests cover the single-message contract, Gemini role mapping, malformed history rejection, bounded complete turns, and actual controller calls using an isolated mock model. They do not require a live API key.

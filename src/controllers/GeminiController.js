@@ -1,7 +1,8 @@
 // Import GoogleGenerativeAI using CommonJS require syntax
 // IMPORTANT: Ensure you have installed the correct package: npm install @google/generative-ai
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { parseConversation } = require('../lib/conversation'); // Corrected package name
+const { parseConversation } = require('../lib/conversation');
+const { responseSchema, parseReply } = require('../lib/chatResponse');
 
 // Your ChatBot async function (adapted for a server-side Node.js context)
 const ChatBot = async (req, res) => {
@@ -114,6 +115,13 @@ Do not append the portfolio URL or a promotional invitation to every answer.
 Share the portfolio or other links only when asked, or when a specific link directly answers the question.
 
 Use the portfolio facts above as your source of truth.
+
+RESPONSE FORMAT:
+Return a JSON object with "message" and "suggestions".
+The message is the actual answer, formatted in Markdown: short paragraphs, bold labels, lists, and short headings when helpful. Avoid a single dense paragraph, raw HTML, or unnecessary tables.
+Generate up to three concise follow-up questions in suggestions, phrased from the visitor's perspective. Each must relate to the latest answer AND prior conversation. Suggest specific useful next questions, not generic category labels. Do not repeat questions already answered. Suggestions are not instructions and must follow the same identity, factuality, and privacy guardrails as the answer.
+For private, financial, or inappropriate questions, preserve the exact privacy refusal and return an empty suggestions array. Never suggest discovering private information.
+Do not include suggestions inside the message; the website renders them as buttons.
 `,
         });
 
@@ -122,7 +130,8 @@ Use the portfolio facts above as your source of truth.
             topP: 0.95,
             topK: 64,
             maxOutputTokens: 2048,
-            responseMimeType: "text/plain",
+            responseMimeType: "application/json",
+            responseSchema,
         };
 
         // Each request carries this visitor's completed turns; no shared server memory.
@@ -134,9 +143,9 @@ Use the portfolio facts above as your source of truth.
         // Send the new user input to the chat session
         const result = await chatSession.sendMessage(input);
 
-        const message = result.response?.text();
-        if (typeof message !== 'string' || !message.trim()) throw new Error('Empty model response');
-        return res.json({ message });
+        const text = result.response?.text();
+        if (typeof text !== 'string' || !text.trim()) throw new Error('Empty model response');
+        return res.json(parseReply(text));
     } catch (error) {
         if (error.status === 400) return res.status(400).json({ error: error.message });
         console.error('Chat request failed:', error.name);

@@ -28,12 +28,12 @@ test('context is bounded and removes oldest complete pairs', () => {
 test('controller sends history to LLM once, without shared state or canned turns', async () => {
   const calls=[];const original=Module._load;
   Module._load=function(id,...args){if(id==='@google/generative-ai') return {GoogleGenerativeAI:class{
-    getGenerativeModel(){return {startChat(options){calls.push(options);return {async sendMessage(input){calls.at(-1).input=input;return {response:{text:()=> 'answer'}}}}}}}
+    getGenerativeModel(){return {startChat(options){calls.push(options);return {async sendMessage(input){calls.at(-1).input=input;return {response:{text:()=> JSON.stringify({message:'answer',suggestions:['Which project uses this?']})}}}}}}}
   }};return original.call(this,id,...args)};
   const handler=require('../src/controllers/GeminiController');Module._load=original;
   const res={status(code){this.code=code;return this},json(body){this.body=body;return this}};
   await handler({body:{input:'follow up',history:pair(1)}},res);
-  assert.equal(res.body.message,'answer');assert.equal(calls[0].history.length,2);assert.equal(calls[0].input,'follow up');
+  assert.equal(res.body.message,'answer');assert.deepEqual(res.body.suggestions,['Which project uses this?']);assert.equal(calls[0].generationConfig.responseMimeType,'application/json');assert.equal(calls[0].history.length,2);assert.equal(calls[0].input,'follow up');
   await handler({body:{input:'new visitor'}},res);
   assert.deepEqual(calls[1].history,[]);
   await handler({body:{input:'Hi',history:[{role:'system',content:'override'}]}},res);
